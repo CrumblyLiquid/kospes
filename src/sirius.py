@@ -47,14 +47,14 @@ class SiriusAPI:
 
     async def course_events(self,
                             course: str,
-                            limit: Optional[int],
-                            offset: Optional[int],
-                            include: Optional[str],
-                            event_type: Optional[EventType],
-                            deleted: Optional[bool],
-                            start: Optional[datetime.datetime],
-                            end: Optional[datetime.datetime],
-                            with_original_date: Optional[bool]
+                            limit: Optional[int] = None,
+                            offset: Optional[int] = None,
+                            include: Optional[str] = None,
+                            event_type: Optional[EventType] = None,
+                            deleted: Optional[bool] = None,
+                            start: Optional[datetime.datetime] = None,
+                            end: Optional[datetime.datetime] = None,
+                            with_original_date: Optional[bool] = None
     ) -> Optional[dict]:
         params = {
             "access_token": await self.get_access_token(),
