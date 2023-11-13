@@ -2,6 +2,7 @@ from typing import List, Tuple
 from typing_extensions import Self
 from pathlib import Path
 import json
+import os.path
 
 DEFAULT_PATH: Path = Path("config.json")
 
@@ -18,6 +19,10 @@ class Config:
         self.channels = channels
         self.courses = courses
         self.seen_events = seen_events
+
+    @classmethod
+    def empty(cls) -> Self:
+        return cls([], [], [])
 
     def encode_struct(self):
         return {
@@ -36,7 +41,10 @@ class Config:
 
     @classmethod
     def load(cls, path: Path = DEFAULT_PATH) -> Self:
-        with open(path, "r") as file:
-            (channels, courses, seen_events) = Config.decode_struct(json.load(file))
-            return cls(channels, courses, seen_events)
+        if path.exists():
+            with open(path, "r") as file:
+                (channels, courses, seen_events) = Config.decode_struct(json.load(file))
+                return cls(channels, courses, seen_events)
+        else:
+            return cls.empty()
 
