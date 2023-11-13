@@ -1,4 +1,4 @@
-from typing import List, Tuple, Self
+from typing import List, Tuple
 from pathlib import Path
 import json
 
@@ -19,7 +19,7 @@ class Config:
         self.seen_events = seen_events
 
     @classmethod
-    def empty(cls) -> Self:
+    def empty(cls):
         return cls([], [], [])
 
     def encode_struct(self):
@@ -38,7 +38,7 @@ class Config:
             json.dump(self.encode_struct(), file, indent = 4)
 
     @classmethod
-    def load(cls, path: Path = DEFAULT_PATH) -> Self:
+    def load(cls, path: Path = DEFAULT_PATH):
         if path.exists():
             with open(path, "r") as file:
                 (channels, courses, seen_events) = Config.decode_struct(json.load(file))
