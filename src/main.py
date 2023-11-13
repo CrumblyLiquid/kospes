@@ -20,7 +20,33 @@ class KOSPes(discord.Client):
             if channel is None:
                 channel = await self.fetch_channel(channel_id)
             if(type(channel) is discord.TextChannel):
-                await channel.send(f"[{course}] Nový termín: {event['id']}")
+                embed = discord.Embed()
+                embed.title = f"[{course}]"
+
+                if("starts_at" in event):
+                    start = datetime.strptime(event["starts_at"], '%Y-%m-%dT%H:%M:%S.%f%z')
+                    start_unix = int(start.timestamp())
+                    embed.add_field(name = "Od", value = f"<t:{start_unix}:F>")
+
+                if("ends_at" in event):
+                    end = datetime.strptime(event["ends_at"], '%Y-%m-%dT%H:%M:%S.%f%z')
+                    end_unix = int(end.timestamp())
+                    embed.add_field(name = "Do", value = f"<t:{end_unix}:F>")
+
+                if("capacity" in event):
+                    embed.add_field(name = "Kapacita", value = event["capacity"], inline = False)
+                if("occupied" in event):
+                    embed.add_field(name = "Obsazenost", value = event["occupied"], inline = True)
+
+                if("links" in event):
+                    if("teachers" in event["links"]):
+                        embed.set_footer(text = ", ".join(event["links"]["teachers"]))
+                    if("room" in event["links"]):
+                        embed.add_field(name = "Místnost", value = event["links"]["room"], inline = False)
+
+                embed.colour = discord.Colour.blue()
+
+                await channel.send(embed=embed)
 
     @tasks.loop(hours=2)
     async def update(self):
