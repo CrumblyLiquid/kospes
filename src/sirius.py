@@ -19,7 +19,7 @@ class SiriusAPI:
     url: str = "https://sirius.fit.cvut.cz/api/v1"
     client_id: str
     client_secret: str
-    access_token: str | None = None
+    access_token: Optional[str] = None
     expires_in: int = 0
 
     def __init__(self, client_id: str, client_secret: str):
@@ -88,8 +88,8 @@ class SiriusAPI:
 async def main():
     load_dotenv()
 
-    client_id_result: str | None = getenv("CLIENT_ID")
-    client_secret_result: str | None = getenv("CLIENT_SECRET")
+    client_id_result: Optional[str] = getenv("CLIENT_ID")
+    client_secret_result: Optional[str] = getenv("CLIENT_SECRET")
 
     if (client_id_result is not None and
         client_secret_result is not None
