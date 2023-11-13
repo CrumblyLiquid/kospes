@@ -1,4 +1,6 @@
 from enum import Enum
+from dotenv import load_dotenv
+from os import getenv
 import datetime
 import time
 import aiohttp
@@ -83,10 +85,18 @@ class SiriusAPI:
                     print(await response.text())
 
 async def main():
-    api = SiriusAPI(
-        "client_id",
-        "client_secret")
-    print(await api.course_events("BI-LA1.21"))
+    load_dotenv()
+
+    client_id_result: str | None = getenv("CLIENT_ID")
+    client_secret_result: str | None = getenv("CLIENT_SECRET")
+
+    if (client_id_result is not None and
+        client_secret_result is not None
+    ):
+        api = SiriusAPI(
+            client_id_result,
+            client_secret_result)
+        print(await api.course_events("BI-LA1.21"))
 
 if __name__ == "__main__":
     asyncio.run(main())
