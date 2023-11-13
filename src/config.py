@@ -2,7 +2,6 @@ from typing import List, Tuple
 from typing_extensions import Self
 from pathlib import Path
 import json
-import os.path
 
 DEFAULT_PATH: Path = Path("config.json")
 
