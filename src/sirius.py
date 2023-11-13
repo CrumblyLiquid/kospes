@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Optional
 from dotenv import load_dotenv
 from os import getenv
 import datetime
@@ -46,15 +47,15 @@ class SiriusAPI:
 
     async def course_events(self,
                             course: str,
-                            limit: int | None = None,
-                            offset: int | None = None,
-                            include: str | None = None,
-                            event_type: EventType | None = None,
-                            deleted: bool | None = None,
-                            start: datetime.datetime | None = None,
-                            end: datetime.datetime | None = None,
-                            with_original_date: bool | None = None
-    ):
+                            limit: Optional[int],
+                            offset: Optional[int],
+                            include: Optional[str],
+                            event_type: Optional[EventType],
+                            deleted: Optional[bool],
+                            start: Optional[datetime.datetime],
+                            end: Optional[datetime.datetime],
+                            with_original_date: Optional[bool]
+    ) -> Optional[dict]:
         params = {
             "access_token": await self.get_access_token(),
         }
@@ -66,7 +67,7 @@ class SiriusAPI:
         if include is not None:
             params["include"] = include
         if event_type is not None:
-            params["event_type"] = str(event_type)
+            params["event_type"] = str(event_type.value)
         if deleted is not None:
             params["deleted"] = str(deleted).lower()
         if start is not None:
