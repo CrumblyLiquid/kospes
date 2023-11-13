@@ -44,6 +44,10 @@ class KOSPes(discord.Client):
                     if("room" in event["links"]):
                         embed.add_field(name = "Místnost", value = event["links"]["room"], inline = False)
 
+                if("note" in event):
+                    if("cs" in event["note"]):
+                        embed.add_field(name = "Poznámka", value = event["note"]["cs"], inline = False)
+
                 embed.colour = discord.Colour.blue()
 
                 await channel.send(embed=embed)
