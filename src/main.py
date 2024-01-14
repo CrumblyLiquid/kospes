@@ -1,7 +1,7 @@
 import discord
 from discord.ext import tasks
 from discord.ext import commands
-from discord import TextChannel, Thread
+from discord import TextChannel, Thread, Embed
 from discord.abc import GuildChannel, PrivateChannel
 
 from typing import Optional, Union, List
@@ -52,14 +52,9 @@ class KOSPes(discord.Client):
             if channel is not None:
                 await channel.send(message)
 
-
-    # Send a notification to all the subscribed channels
-    async def send_notification(self, course: str, event):
-        if len(self.config.channels) < 1:
-            return
-
+    async def get_event_embed(self, course: str, event) -> Embed:
         # Construct the embed to send
-        embed = discord.Embed()
+        embed = Embed()
         embed.title = f"[{course}]"
 
         # Be sure to check if every field actually exists
@@ -107,16 +102,31 @@ class KOSPes(discord.Client):
                     inline = False)
 
         embed.colour = discord.Colour.blue()
+        return embed
+
+    # Send a notification to all the subscribed channels
+    async def send_notifications(self, embeds: List[Embed]):
+        if len(self.config.channels) < 1:
+            return
+
+        split_embeds: List[List[Embed]] = []
+        for (i, embed) in enumerate(embeds):
+            index: int = i // 10
+            if index >= len(split_embeds):
+                split_embeds[index] = []
+            split_embeds[index].append(embed)
 
         for channel_id in self.config.channels:
             channel: Optional[TextChannel] = await self.get_text_channel(channel_id)
             if channel is not None:
-                await channel.send(embed=embed)
+                for embed_slice in split_embeds:
+                    await channel.send(embeds=embed_slice)
 
     @tasks.loop(hours=2)
     async def update(self):
         # Any new events? Send a ping!
         new_events: bool = False
+        embeds: List[Embed] = []
 
         # Fetch the newest events for each rouse
         for course in self.config.courses:
@@ -133,11 +143,12 @@ class KOSPes(discord.Client):
                         # If we haven't seen the event, save its ID
                         # and send out notifications to the subscribed channels
                         if event["id"] not in self.config.seen_events:
-                            await self.send_notification(course, event)
                             new_events = True
+                            embeds.append(await self.get_event_embed(course, event))
                             self.config.seen_events.append(event["id"])
 
         if new_events:
+            await self.send_notifications(embeds)
             await self.send_ping()
 
         self.config.save()
