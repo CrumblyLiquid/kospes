@@ -1,2 +1,6 @@
 *.env
 *.json
+
+
+# Added by cargo
+/target
