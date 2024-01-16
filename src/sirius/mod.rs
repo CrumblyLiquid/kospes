@@ -1,3 +1,6 @@
+mod model;
+use model::{Meta, Event, EventType};
+
 const URL: &str = "https://sirius.fit.cvut.cz/api/v1";
 
 #[derive(Debug, Default, Clone)]
@@ -12,4 +15,13 @@ impl Sirius {
     async fn get_access_token(&self) {
 
     }
+
+    async fn course_events(&self, course: String, options: Options) -> Result<EventResult, ()>{
+
+    }
+}
+
+pub struct EventResult {
+    meta: Meta,
+    events: Vec<Event>
 }
