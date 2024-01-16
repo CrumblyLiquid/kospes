@@ -8,6 +8,8 @@ use serenity::all::GatewayIntents;
 use serenity::prelude::*;
 use serenity::{all::Ready, async_trait};
 
+use sqlx::sqlite::{SqlitePool, SqliteConnectOptions};
+
 mod config;
 use config::{load_config, write_config, Config};
 
@@ -15,6 +17,7 @@ const DEFAULT_PATH: &str = "./config.toml";
 
 struct Handler {
     config: Config,
+    conn: SqlitePool,
 }
 
 #[async_trait]
@@ -34,7 +37,7 @@ impl EventHandler for Handler {
 }
 
 async fn check(_ctx: Arc<Context>, config: Arc<Config>) {
-    println!("Objectives: {}", config.objectives.len());
+    println!("Config: {:?}", config);
 }
 
 #[tokio::main]
@@ -47,11 +50,21 @@ async fn main() {
     // let conf: config::Config = config::Config::default();
     // write_config(DEFAULT_PATH, &conf).await;
 
-    let config = load_config(DEFAULT_PATH).await;
+    let path = DEFAULT_PATH;
+    let mut config = load_config(path).await;
+    config.path = path.into();
+
+    let db_options = SqliteConnectOptions::new()
+        .filename(&config.db)
+        .create_if_missing(true);
+
+    let db_pool = SqlitePool::connect_with(db_options)
+        .await
+        .expect("Failed to connect to the SQLite database");
 
     let intents = GatewayIntents::GUILD_MESSAGES;
     let mut client = Client::builder(&token, intents)
-        .event_handler(Handler { config })
+        .event_handler(Handler { config , conn: db_pool })
         .await
         .expect("Error while creating the client!");
 
