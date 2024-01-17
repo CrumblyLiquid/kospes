@@ -5,6 +5,9 @@ use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use toml;
 
+const DEFAULT_INTERVAL: u32 = 2 * 60 * 60; // 2 hours
+const DEFAULT_COOLDOWN: u32 = 24 * 60 * 60; // 1 day
+
 // Database of previously seen events will be moved
 // into its own sqlite database to keep config clean
 
@@ -22,26 +25,35 @@ pub struct Config {
     /// that is used for storing seen events
     pub db: PathBuf,
 
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub subjects: Vec<Subject>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub calendars: Vec<Calendar>,
 
     // Fallback options in case more specific options are not present
-    /// How often to check for updates on subject
-    pub interval: u32,
-    /// Channel to post updates
-    pub channel: Vec<ChannelId>,
-    /// Role to ping when new updates are posted
-    pub ping: Vec<RoleId>,
+    #[serde(flatten)]
+    pub meta: Option<Metadata>,
 }
 
 /// Metadata to know how and when to post events
+/// When optional values are not present, check for the values
+/// of its parent and if that fails, use the default values
+/// defined in config.rs
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Metadata {
     /// How often to check for updates
     pub interval: Option<u32>,
+    /// How long to wait for another check after update is detected
+    pub cooldown: Option<u32>,
     /// What channel to post events to
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub channel: Vec<ChannelId>,
     /// What role to ping when new events are posted
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub ping: Vec<RoleId>,
 }
 
@@ -52,8 +64,10 @@ pub struct Subject {
     /// Name of the subject (as specified by Sirius API)
     pub name: String,
     /// What types of events should be watched
+    #[serde(default)]
     pub events: Vec<Event>,
-    pub meta: Metadata,
+    #[serde(flatten)]
+    pub meta: Option<Metadata>,
 }
 
 /// Specific event type
@@ -62,7 +76,8 @@ pub struct Subject {
 pub struct Event {
     /// Name of the event type (as specified by Sirius API)
     pub event_type: String,
-    pub meta: Metadata,
+    #[serde(flatten)]
+    pub meta: Option<Metadata>,
 }
 
 /// Calendar in iCal format to pull special events from
@@ -73,7 +88,8 @@ pub struct Calendar {
     pub name: String,
     /// Path to the .ical file
     pub path: PathBuf,
-    pub meta: Metadata,
+    #[serde(flatten)]
+    pub meta: Option<Metadata>,
 }
 
 // TODO: Return Result from load and write functions!
