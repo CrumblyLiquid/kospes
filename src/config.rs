@@ -98,7 +98,7 @@ pub async fn write_config(config: &Config, path: Option<PathBuf>) {
     };
 
     let config_str = toml::to_string(&config).expect("Faild to serialize config to string!");
-    let mut file = File::open(cfg_path).await.expect("Failed to open config!");
+    let mut file = File::create(cfg_path).await.expect("Failed to open config!");
     file.write(config_str.as_bytes())
         .await
         .expect("Failed to write config to file");
