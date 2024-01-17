@@ -5,8 +5,8 @@ use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use toml;
 
-const DEFAULT_INTERVAL: u32 = 2 * 60 * 60; // 2 hours
-const DEFAULT_COOLDOWN: u32 = 24 * 60 * 60; // 1 day
+pub const DEFAULT_INTERVAL: u32 = 2 * 60 * 60; // 2 hours
+pub const DEFAULT_COOLDOWN: u32 = 24 * 60 * 60; // 1 day
 
 // Database of previously seen events will be moved
 // into its own sqlite database to keep config clean
@@ -50,11 +50,11 @@ pub struct Metadata {
     /// What channel to post events to
     #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub channel: Vec<ChannelId>,
+    pub channels: Vec<ChannelId>,
     /// What role to ping when new events are posted
     #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub ping: Vec<RoleId>,
+    pub pings: Vec<RoleId>,
 }
 
 /// Subject to watch via Sirius API

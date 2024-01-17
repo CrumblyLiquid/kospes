@@ -1,26 +1,4 @@
-use chrono::DateTime;
-
-pub enum EventType {
-    Assesment,
-    CourseEvent,
-    Exam,
-    Laboratory,
-    Lecture,
-    Tutorial,
-}
-
-impl EventType {
-    fn as_str(&self) -> &'static str {
-        match self {
-            EventType::Assesment => "assessment",
-            EventType::CourseEvent => "course_event",
-            EventType::Exam => "exam",
-            EventType::Laboratory => "laboratory",
-            EventType::Lecture => "lecture",
-            EventType::Tutorial => "tutorial",
-        }
-    }
-}
+use chrono::{DateTime, Utc};
 
 pub struct Meta {
     count: i32,
@@ -32,20 +10,28 @@ pub struct Event {
     pub id: i32,
     pub name: Option<String>,
     pub sequence_number: i32,
-    pub starts_at: DateTime,
-    pub ends_at: DateTime,
+    pub starts_at: DateTime<Utc>,
+    pub ends_at: DateTime<Utc>,
     pub deleted: bool,
     pub capacity: i32,
     pub occupied: i32,
-    pub event_type: EventType,
+    /// Type of event
+    /// Valid values:
+    /// - assessment
+    /// - course_event
+    /// - exam
+    /// - laboratory
+    /// - lecture
+    /// - tutorial
+    pub event_type: String,
     pub parallel: String,
     pub original_data: OriginalData,
     pub links: Links,
 }
 
 pub struct OriginalData {
-    pub starts_at: Option<DateTime>,
-    pub ends_at: Option<DateTime>,
+    pub starts_at: Option<DateTime<Utc>>,
+    pub ends_at: Option<DateTime<Utc>>,
     pub room_id: Option<String>,
 }
 

@@ -13,10 +13,18 @@ use sqlx::sqlite::{SqlitePool, SqliteConnectOptions};
 mod config;
 use config::{load_config, write_config, Config};
 
+mod task;
+use task::Task;
+
+mod sirius;
+use sirius::Sirius;
+
 const DEFAULT_PATH: &str = "./config.toml";
 
 struct Handler {
-    config: Config,
+    client_id: String,
+    client_secret: String,
+    tasks: Vec<Task>,
     conn: SqlitePool,
 }
 
@@ -26,32 +34,41 @@ impl EventHandler for Handler {
         println!("{} is connected!", ready.user.name);
 
         let ctx = Arc::new(ctx);
-        let conf = Arc::new(self.config.clone());
+        let tasks = self.tasks.clone();
+        let sirius = Sirius::new(self.client_id.clone(), self.client_secret.clone());
+
         tokio::spawn(async move {
+            let mut tasks = tasks;
+            let mut sirius = sirius;
             loop {
-                check(Arc::clone(&ctx), Arc::clone(&conf)).await;
-                tokio::time::sleep(Duration::from_secs(1)).await;
+                check(Arc::clone(&ctx), &mut tasks, &mut sirius).await;
+                tokio::time::sleep(Duration::from_secs(400)).await;
             }
         });
     }
 }
 
-async fn check(_ctx: Arc<Context>, config: Arc<Config>) {
-    println!("Config: {:?}", config);
+async fn check(_ctx: Arc<Context>, tasks: &mut Vec<Task>, sirius: &mut Sirius) {
+    println!("Tasks: {:?}", tasks);
+    sirius.load_access_token().await.unwrap();
 }
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
 
-    let token = env::var("DISCORD").expect("Expected a token in the environment");
+    let token = env::var("DISCORD").expect("Expected Discord token in the environment");
+    let client_id = env::var("CLIENT_ID").expect("Expected cilent id in the environment");
+    let client_secret = env::var("CLIENT_SECRET").expect("Expected client secret in the environment");
+
+    // TODO: Write default config if loading config fails
 
     // Write empty config
     // let conf: config::Config = config::Config::default();
-    // write_config(DEFAULT_PATH, &conf).await;
+    // write_config(&conf, Some(DEFAULT_PATH.into())).await;
 
     let path = DEFAULT_PATH;
-    let mut config = load_config(path).await;
+    let mut config: Config = load_config(path).await;
     config.path = path.into();
 
     let db_options = SqliteConnectOptions::new()
@@ -62,9 +79,12 @@ async fn main() {
         .await
         .expect("Failed to connect to the SQLite database");
 
+    // Convert config into tasks
+    let tasks: Vec<Task> = config.into();
+
     let intents = GatewayIntents::GUILD_MESSAGES;
     let mut client = Client::builder(&token, intents)
-        .event_handler(Handler { config , conn: db_pool })
+        .event_handler(Handler { client_id, client_secret, tasks , conn: db_pool })
         .await
         .expect("Error while creating the client!");
 
