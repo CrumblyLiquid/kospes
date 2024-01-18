@@ -1,7 +1,8 @@
+use anyhow::Result;
 use chrono::{DateTime, Utc};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
-use tokio::time::{Instant, Duration};
+use tokio::time::{Duration, Instant};
 
 mod model;
 use model::{Event, Meta};
@@ -27,8 +28,7 @@ impl Sirius {
         }
     }
 
-    // TODO: Better error checking (custom result type?)
-    pub async fn load_access_token(&mut self) -> reqwest::Result<String> {
+    pub async fn load_access_token(&mut self) -> Result<String> {
         let now = Instant::now();
         if self.access_token.is_none() || self.expires_in <= now {
             // We have to make request
@@ -44,10 +44,8 @@ impl Sirius {
                 .await?;
 
             if res.status() == StatusCode::OK {
-                let text = res.text().await.unwrap_or_else(|_| String::new());
-                let content: AuthResponse =
-                    serde_json::from_str(&text)
-                    .expect("Failed to deserialize OAuth2 Response");
+                let text = res.text().await?;
+                let content: AuthResponse = serde_json::from_str(&text)?;
                 self.access_token = Some(content.access_token.clone());
                 self.expires_in = Instant::now() + Duration::from_secs(content.expires_in);
             }
@@ -59,9 +57,9 @@ impl Sirius {
         &mut self,
         _course_code: String,
         _options: Options,
-    ) -> Result<EventResult, ()> {
-        let _token = self.load_access_token().await.expect("Failed to get token!");
-        Err(())
+    // TODO: Call API and return EventResult
+    ) -> Result<String> {
+        self.load_access_token().await
     }
 }
 
@@ -77,7 +75,6 @@ struct AuthResponse {
     expires_in: u64,
     scope: String,
 }
-
 
 #[derive(Default, Debug)]
 pub struct Options {
