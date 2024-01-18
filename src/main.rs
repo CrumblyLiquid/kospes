@@ -10,7 +10,7 @@ use serenity::all::GatewayIntents;
 use serenity::prelude::*;
 use serenity::{all::Ready, async_trait};
 
-use sqlx::sqlite::{SqlitePool, SqliteConnectOptions};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 
 mod config;
 use config::{load_config, write_config, Config};
@@ -19,7 +19,7 @@ mod task;
 use task::Task;
 
 mod sirius;
-use sirius::Sirius;
+use sirius::{Sirius, Options};
 
 const DEFAULT_PATH: &str = "./config.toml";
 
@@ -61,24 +61,24 @@ async fn main() {
     // Environment variables
     // Maybe move them into config.toml?
     dotenv().ok();
-    let token = env::var("DISCORD").expect("Expected Discord token in the environment");
-    let client_id = env::var("CLIENT_ID").expect("Expected cilent id in the environment");
-    let client_secret = env::var("CLIENT_SECRET").expect("Expected client secret in the environment");
+    let token =
+        env::var("DISCORD").expect("Expected Discord token in the environment");
+    let client_id =
+        env::var("CLIENT_ID").expect("Expected cilent id in the environment");
+    let client_secret =
+        env::var("CLIENT_SECRET").expect("Expected client secret in the environment");
 
     // Tries to load config from the default path
     // If that fails, it constructs a Default config and
     // tries to write it on to the path
     let path = DEFAULT_PATH;
     let config: Config = match fs::try_exists(path).await {
-        Ok(true) => {
-            match load_config(path).await {
-                Ok(mut conf) => {
-                    conf.path = path.into();
-                    conf
-                },
-                Err(e) => panic!("Failed to load config! Error: {}", e)
+        Ok(true) => match load_config(path).await {
+            Ok(mut conf) => {
+                conf.path = path.into();
+                conf
             }
-
+            Err(e) => panic!("Failed to load config! Error: {}", e),
         },
         Ok(false) => {
             let conf: config::Config = config::Config::default();
@@ -86,8 +86,8 @@ async fn main() {
                 panic!("Failed to write default config! Error: {}", e)
             }
             conf
-        },
-        Err(e) => panic!("Failed to check config path! Error: {}", e)
+        }
+        Err(e) => panic!("Failed to check config path! Error: {}", e),
     };
 
     // Create SQLite database connection
@@ -105,7 +105,12 @@ async fn main() {
 
     let intents = GatewayIntents::GUILD_MESSAGES;
     let mut client = Client::builder(&token, intents)
-        .event_handler(Handler { client_id, client_secret, tasks , conn: db_pool })
+        .event_handler(Handler {
+            client_id,
+            client_secret,
+            tasks,
+            conn: db_pool,
+        })
         .await
         .expect("Error while creating the client!");
 
