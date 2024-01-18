@@ -1,3 +1,4 @@
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{ChannelId, RoleId};
 use std::path::{Path, PathBuf};
@@ -92,30 +93,26 @@ pub struct Calendar {
     pub meta: Option<Metadata>,
 }
 
-// TODO: Return Result from load and write functions!
-
-pub async fn load_config(path: impl AsRef<Path>) -> Config {
-    let mut file = File::open(&path).await.expect("Failed to open config!");
+pub async fn load_config(path: impl AsRef<Path>) -> Result<Config> {
+    let mut file = File::open(&path).await?;
 
     let mut config_str = String::new();
-    file.read_to_string(&mut config_str)
-        .await
-        .expect("Failed to read config!");
+    file.read_to_string(&mut config_str).await?;
 
-    toml::from_str(&config_str).expect("Failed to parse config!")
+    let config = toml::from_str(&config_str)?;
+    Ok(config)
 }
 
 /// Write configuration to a file
 /// Uses Config.path if path argument is not specified
-pub async fn write_config(config: &Config, path: Option<PathBuf>) {
+pub async fn write_config(config: &Config, path: Option<PathBuf>) -> Result<PathBuf> {
     let cfg_path = match path {
         Some(ref path) => path,
         None => &config.path,
     };
 
-    let config_str = toml::to_string(&config).expect("Faild to serialize config to string!");
-    let mut file = File::create(cfg_path).await.expect("Failed to open config!");
-    file.write(config_str.as_bytes())
-        .await
-        .expect("Failed to write config to file");
+    let config_str = toml::to_string(&config)?;
+    let mut file = File::create(cfg_path).await?;
+    file.write(config_str.as_bytes()).await?;
+    Ok(cfg_path.to_path_buf())
 }

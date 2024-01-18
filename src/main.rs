@@ -1,6 +1,8 @@
 use std::env;
 use std::sync::Arc;
-use std::time::Duration;
+use tokio::time::Duration;
+
+use tokio::fs;
 
 use dotenv::dotenv;
 
@@ -61,15 +63,30 @@ async fn main() {
     let client_id = env::var("CLIENT_ID").expect("Expected cilent id in the environment");
     let client_secret = env::var("CLIENT_SECRET").expect("Expected client secret in the environment");
 
-    // TODO: Write default config if loading config fails
-
-    // Write empty config
-    // let conf: config::Config = config::Config::default();
-    // write_config(&conf, Some(DEFAULT_PATH.into())).await;
-
+    // Tries to load config from the default path
+    // If that fails, it constructs a Default config and
+    // tries to write it on to the path
     let path = DEFAULT_PATH;
-    let mut config: Config = load_config(path).await;
-    config.path = path.into();
+    let config: Config = match fs::try_exists(path).await {
+        Ok(true) => {
+            match load_config(path).await {
+                Ok(mut conf) => {
+                    conf.path = path.into();
+                    conf
+                },
+                Err(e) => panic!("Failed to load config! Error: {}", e)
+            }
+
+        },
+        Ok(false) => {
+            let conf: config::Config = config::Config::default();
+            if let Err(e) = write_config(&conf, Some(path.into())).await {
+                panic!("Failed to write default config! Error: {}", e)
+            }
+            conf
+        },
+        Err(e) => panic!("Failed to check config path! Error: {}", e)
+    };
 
     let db_options = SqliteConnectOptions::new()
         .filename(&config.db)
