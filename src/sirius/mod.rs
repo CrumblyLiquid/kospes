@@ -3,11 +3,10 @@ use std::collections::HashMap;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use reqwest::{Client, StatusCode};
-use serde::{Deserialize, Serialize};
 use tokio::time::{Duration, Instant};
 
 mod model;
-use model::{Event, Meta};
+use model::{AuthResponse, EventResult};
 
 const URL: &str = "https://sirius.fit.cvut.cz/api/v1";
 const OAUTH_URL: &str = "https://auth.fit.cvut.cz/oauth/oauth/token";
@@ -81,17 +80,6 @@ impl Sirius {
     }
 }
 
-// This struct is used for deserializing a json response
-// so we want to include all the variables even if we don't use them
-#[allow(unused_variables)]
-#[derive(Deserialize, Debug)]
-struct AuthResponse {
-    access_token: String,
-    token_type: String,
-    expires_in: u64,
-    scope: String,
-}
-
 #[derive(Default, Debug)]
 pub struct Options {
     /// The number of entries in collection to return
@@ -158,10 +146,4 @@ impl From<Options> for HashMap<String, String> {
 
         map
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EventResult {
-    meta: Meta,
-    events: Vec<Event>,
 }

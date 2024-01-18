@@ -1,7 +1,6 @@
 use std::env;
 use std::sync::Arc;
 use tokio::time::Duration;
-
 use tokio::fs;
 
 use dotenv::dotenv;
@@ -27,7 +26,7 @@ struct Handler {
     client_id: String,
     client_secret: String,
     tasks: Vec<Task>,
-    conn: SqlitePool,
+    _conn: SqlitePool,
 }
 
 #[async_trait]
@@ -112,7 +111,7 @@ async fn main() {
             client_id,
             client_secret,
             tasks,
-            conn: db_pool,
+            _conn: db_pool,
         })
         .await
         .expect("Error while creating the client!");

@@ -1,11 +1,28 @@
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 
+// This struct is used for deserializing a json response
+// so we want to include all the variables even if we don't use them
+#[allow(unused_variables)]
+#[derive(Deserialize, Debug)]
+pub struct AuthResponse {
+    pub access_token: String,
+    pub token_type: String,
+    pub expires_in: u64,
+    pub scope: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EventResult {
+    pub meta: Meta,
+    pub events: Vec<Event>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Meta {
-    count: i32,
-    offset: i32,
-    limit: i32,
+    pub count: i32,
+    pub offset: i32,
+    pub limit: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
