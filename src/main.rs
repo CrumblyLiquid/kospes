@@ -51,9 +51,12 @@ impl EventHandler for Handler {
 }
 
 async fn check(_ctx: Arc<Context>, tasks: &mut Vec<Task>, sirius: &mut Sirius) {
-    println!("Tasks: {:?}", tasks);
-    let token = sirius.load_access_token().await.unwrap();
-    println!("Token: {}", token);
+    println!("Tasks: {:#?}", tasks);
+    let opts = Options {
+        ..Options::default()
+    };
+    let res = sirius.course_events("BI-LA1.21".into(), opts).await;
+    println!("Response: {:#?}", res);
 }
 
 #[tokio::main]

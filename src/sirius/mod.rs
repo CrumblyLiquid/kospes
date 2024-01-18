@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use reqwest::{Client, StatusCode};
@@ -55,15 +57,29 @@ impl Sirius {
 
     pub async fn course_events(
         &mut self,
-        _course_code: String,
-        _options: Options,
-    // TODO: Call API and return EventResult
-    ) -> Result<String> {
-        self.load_access_token().await
+        course_code: String,
+        options: Options,
+    ) -> Result<EventResult> {
+        let token = self.load_access_token().await?;
+
+        let mut map: HashMap<String, String> = options.into();
+        map.insert("access_token".into(), token);
+
+        let url = format!("{}/courses/{}/events", URL, course_code);
+
+        // We have to make request
+        let res = Client::new()
+            .get(url)
+            .form(&map)
+            .send()
+            .await?;
+
+        // TODO: Check for StatusCode::OK
+        let text = res.text().await?;
+        let content: EventResult = serde_json::from_str(&text)?;
+        Ok(content)
     }
 }
-
-pub enum SiriusError {}
 
 // This struct is used for deserializing a json response
 // so we want to include all the variables even if we don't use them
@@ -104,9 +120,48 @@ pub struct Options {
     pub with_original_date: Option<bool>,
 }
 
+impl From<Options> for HashMap<String, String> {
+    fn from(val: Options) -> Self {
+        let mut map = HashMap::new();
+
+        if let Some(limit) = val.limit {
+            map.insert("limit".into(), limit.to_string());
+        }
+
+        if let Some(offset) = val.offset {
+            map.insert("offset".into(), offset.to_string());
+        }
+
+        if let Some(include) = val.include {
+            map.insert("include".into(), include);
+        }
+
+        if let Some(event_type) = val.event_type {
+            map.insert("event_type".into(), event_type);
+        }
+
+        if let Some(deleted) = val.deleted {
+            map.insert("deleted".into(), deleted.to_string());
+        }
+
+        if let Some(from) = val.from {
+            map.insert("from".into(), from.to_string());
+        }
+
+        if let Some(to) = val.to {
+            map.insert("to".into(), to.to_string());
+        }
+
+        if let Some(with_original_date) = val.with_original_date {
+            map.insert("with_original_date".into(), with_original_date.to_string());
+        }
+
+        map
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EventResult {
-    #[serde(flatten)]
     meta: Meta,
     events: Vec<Event>,
 }

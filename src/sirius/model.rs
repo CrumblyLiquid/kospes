@@ -43,7 +43,10 @@ pub struct OriginalData {
 pub struct Links {
     pub room: String,
     pub course: String,
+    #[serde(default = "Vec::new")]
     pub teachers: Vec<String>,
+    #[serde(default = "Vec::new")]
     pub students: Vec<String>,
+    #[serde(default = "Vec::new")]
     pub applied_exceptions: Vec<i32>,
 }
