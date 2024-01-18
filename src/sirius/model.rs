@@ -1,11 +1,14 @@
 use chrono::{DateTime, Utc};
+use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Meta {
     count: i32,
     offset: i32,
     limit: i32,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Event {
     pub id: i32,
     pub name: Option<String>,
@@ -29,12 +32,14 @@ pub struct Event {
     pub links: Links,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct OriginalData {
     pub starts_at: Option<DateTime<Utc>>,
     pub ends_at: Option<DateTime<Utc>>,
     pub room_id: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Links {
     pub room: String,
     pub course: String,

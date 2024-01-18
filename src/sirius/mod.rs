@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use reqwest::{Client, StatusCode};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio::time::{Instant, Duration};
 
 mod model;
@@ -79,25 +79,37 @@ struct AuthResponse {
 }
 
 
+#[derive(Default, Debug)]
 pub struct Options {
+    /// The number of entries in collection to return
+    /// Default: 10
+    /// Maximum: 100
     pub limit: Option<u32>,
+    /// Offset of the first entry in collection
+    /// Default: 0
     pub offset: Option<u32>,
+    /// A comma-separated list of the link names to include
+    /// E.g.: `courses,teachers,schedule_exceptions`
     pub include: Option<String>,
+    /// Filter by event's type
     pub event_type: Option<String>,
+    /// Return even events that have been deleted
+    /// Default: false
     pub deleted: Option<bool>,
+    /// Return events from this date
     pub from: Option<DateTime<Utc>>,
+    /// Return events up to this date
     pub to: Option<DateTime<Utc>>,
+    /// When the date of event has been changed by a schedule exception,
+    /// original date is not considered for date filtering (by from/to parameters).
+    /// With this parameter Sirius will include events’ original date in a date filter.
+    /// Default: false
     pub with_original_date: Option<bool>,
 }
 
-// TODO:
-/*
-impl Default for Options {
-
-}
-*/
-
+#[derive(Serialize, Deserialize, Debug)]
 pub struct EventResult {
+    #[serde(flatten)]
     meta: Meta,
     events: Vec<Event>,
 }
