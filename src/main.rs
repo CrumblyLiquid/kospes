@@ -52,13 +52,15 @@ impl EventHandler for Handler {
 
 async fn check(_ctx: Arc<Context>, tasks: &mut Vec<Task>, sirius: &mut Sirius) {
     println!("Tasks: {:?}", tasks);
-    sirius.load_access_token().await.unwrap();
+    let token = sirius.load_access_token().await.unwrap();
+    println!("Token: {}", token);
 }
 
 #[tokio::main]
 async fn main() {
+    // Environment variables
+    // Maybe move them into config.toml?
     dotenv().ok();
-
     let token = env::var("DISCORD").expect("Expected Discord token in the environment");
     let client_id = env::var("CLIENT_ID").expect("Expected cilent id in the environment");
     let client_secret = env::var("CLIENT_SECRET").expect("Expected client secret in the environment");
@@ -88,6 +90,8 @@ async fn main() {
         Err(e) => panic!("Failed to check config path! Error: {}", e)
     };
 
+    // Create SQLite database connection
+    // Used for storing seen events, etc.
     let db_options = SqliteConnectOptions::new()
         .filename(&config.db)
         .create_if_missing(true);
