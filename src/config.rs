@@ -116,8 +116,11 @@ pub async fn load_config(path: impl AsRef<Path>) -> Result<Config> {
     Ok(config)
 }
 
+// TODO: Maybe use toml_edit to preserve config formatting when saving
 /// Write configuration to a file
 /// Uses Config.path if path argument is not specified
+/// Probably shouldn't be used since it doesn't keep any comments
+/// or formatting that was there previously
 pub async fn write_config(config: &Config, path: Option<PathBuf>) -> Result<PathBuf> {
     let cfg_path = match path {
         Some(ref path) => path,
