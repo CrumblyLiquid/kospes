@@ -24,31 +24,29 @@ impl Default for Task {
     }
 }
 
-fn apply_meta(task: &mut Task, metadata: &Option<Metadata>) {
-    if let Some(meta) = metadata {
-        if let Some(interval) = meta.interval {
-            task.interval = interval;
-        }
-        if let Some(cooldown) = meta.cooldown {
-            task.cooldown = cooldown;
-        }
-        if !meta.channels.is_empty() {
-            task.channels = meta.channels.clone();
-        }
-        if !meta.pings.is_empty() {
-            task.pings = meta.pings.clone();
-        }
+fn apply_meta(task: &mut Task, meta: &Metadata) {
+    if let Some(interval) = meta.interval {
+        task.interval = interval;
+    }
+    if let Some(cooldown) = meta.cooldown {
+        task.cooldown = cooldown;
+    }
+    if !meta.channels.is_empty() {
+        task.channels = meta.channels.clone();
+    }
+    if !meta.pings.is_empty() {
+        task.pings = meta.pings.clone();
     }
 }
 
 impl From<Config> for Vec<Task> {
     fn from(val: Config) -> Self {
         let mut tasks: Vec<Task> = Vec::new();
-        for subject in val.subjects {
-            for event in subject.events {
+        for (name, subject) in val.subjects {
+            for (event_type, event_meta) in subject.events {
                 let mut task = Task {
-                    name: subject.name.clone(),
-                    event_type: event.event_type,
+                    name: name.clone(),
+                    event_type,
                     ..Default::default()
                 };
 
@@ -56,7 +54,7 @@ impl From<Config> for Vec<Task> {
                 // and the lowest one will stick
                 apply_meta(&mut task, &val.meta);
                 apply_meta(&mut task, &subject.meta);
-                apply_meta(&mut task, &event.meta);
+                apply_meta(&mut task, &event_meta);
 
                 tasks.push(task);
             }

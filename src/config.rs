@@ -1,6 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{ChannelId, RoleId};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -26,16 +27,24 @@ pub struct Config {
     /// that is used for storing seen events
     pub db: PathBuf,
 
+    /// Map of subject names and their bodies
     #[serde(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub subjects: Vec<Subject>,
+    #[serde(alias = "subject")]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub subjects: HashMap<String, Subject>,
+
     #[serde(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub calendars: Vec<Calendar>,
+    #[serde(alias = "calendar")]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub calendars: HashMap<String, Calendar>,
 
     // Fallback options in case more specific options are not present
+    // We were flattening Option<Metadata> but it resulted
+    // in Some(Metadata) with default (empty) fields even if it wasn't
+    // present in the config
     #[serde(flatten)]
-    pub meta: Option<Metadata>,
+    #[serde(skip_serializing_if = "Metadata::is_empty")]
+    pub meta: Metadata,
 }
 
 /// Metadata to know how and when to post events
@@ -45,8 +54,10 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Metadata {
     /// How often to check for updates
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub interval: Option<u32>,
     /// How long to wait for another check after update is detected
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cooldown: Option<u32>,
     /// What channel to post events to
     #[serde(default)]
@@ -58,27 +69,27 @@ pub struct Metadata {
     pub pings: Vec<RoleId>,
 }
 
+impl Metadata {
+    fn is_empty(&self) -> bool {
+        self.interval.is_none()
+            && self.cooldown.is_none()
+            && self.channels.is_empty()
+            && self.pings.is_empty()
+    }
+}
+
 /// Subject to watch via Sirius API
 /// If an optional setting is not present, the global one is used
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Subject {
-    /// Name of the subject (as specified by Sirius API)
-    pub name: String,
-    /// What types of events should be watched
+    /// Map of event types with their metadata
     #[serde(default)]
-    pub events: Vec<Event>,
-    #[serde(flatten)]
-    pub meta: Option<Metadata>,
-}
+    #[serde(alias = "event")]
+    pub events: HashMap<String, Metadata>,
 
-/// Specific event type
-/// If an optional setting is not present, the global one is used
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
-pub struct Event {
-    /// Name of the event type (as specified by Sirius API)
-    pub event_type: String,
     #[serde(flatten)]
-    pub meta: Option<Metadata>,
+    #[serde(skip_serializing_if = "Metadata::is_empty")]
+    pub meta: Metadata,
 }
 
 /// Calendar in iCal format to pull special events from
@@ -86,11 +97,13 @@ pub struct Event {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Calendar {
     /// Name of the calendar to use in messages
-    pub name: String,
+    // pub name: String,
     /// Path to the .ical file
     pub path: PathBuf,
+
     #[serde(flatten)]
-    pub meta: Option<Metadata>,
+    #[serde(skip_serializing_if = "Metadata::is_empty")]
+    pub meta: Metadata,
 }
 
 pub async fn load_config(path: impl AsRef<Path>) -> Result<Config> {
