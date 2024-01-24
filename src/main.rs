@@ -2,23 +2,18 @@ use std::env;
 use std::sync::Arc;
 use tokio::time::Duration;
 use tokio::fs;
-
 use dotenv::dotenv;
-
 use serenity::all::GatewayIntents;
 use serenity::prelude::*;
 use serenity::{all::Ready, async_trait};
-
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 
 mod config;
 use config::{load_config, write_config, Config};
-
 mod task;
 use task::Task;
-
-mod sirius;
-use sirius::{Sirius, Options};
+mod api;
+use api::{Api, Options};
 
 const DEFAULT_PATH: &str = "./config.toml";
 
@@ -36,20 +31,20 @@ impl EventHandler for Handler {
 
         let ctx = Arc::new(ctx);
         let tasks = self.tasks.clone();
-        let sirius = Sirius::new(self.client_id.clone(), self.client_secret.clone());
+        let api = Api::new(self.client_id.clone(), self.client_secret.clone());
 
         tokio::spawn(async move {
             let mut tasks = tasks;
-            let mut sirius = sirius;
+            let mut api = api;
             loop {
-                check(Arc::clone(&ctx), &mut tasks, &mut sirius).await;
+                check(Arc::clone(&ctx), &mut tasks, &mut api).await;
                 tokio::time::sleep(Duration::from_secs(400)).await;
             }
         });
     }
 }
 
-async fn check(_ctx: Arc<Context>, tasks: &mut Vec<Task>, sirius: &mut Sirius) {
+async fn check(_ctx: Arc<Context>, tasks: &mut Vec<Task>, sirius: &mut Api) {
     println!("Tasks: {:#?}", tasks);
     let opts = Options {
         ..Options::default()
@@ -91,6 +86,8 @@ async fn main() {
         }
         Err(e) => panic!("Failed to check config path! Error: {}", e),
     };
+
+    println!("{:#?}", config);
 
     // Create SQLite database connection
     // Used for storing seen events, etc.

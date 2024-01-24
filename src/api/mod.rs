@@ -11,13 +11,13 @@ use auth::Auth;
 const URL: &str = "https://sirius.fit.cvut.cz/api/v1";
 
 #[derive(Debug, Clone)]
-pub struct Sirius {
+pub struct Api {
     auth: Auth,
 }
 
-impl Sirius {
-    pub fn new(client_id: String, client_secret: String) -> Sirius {
-        Sirius {
+impl Api {
+    pub fn new(client_id: String, client_secret: String) -> Self {
+        Self {
             auth: Auth::new(client_id, client_secret),
         }
     }
