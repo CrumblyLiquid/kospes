@@ -1,19 +1,19 @@
-use std::env;
-use tokio::fs;
 use dotenv::dotenv;
 use serenity::all::GatewayIntents;
 use serenity::prelude::*;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
+use std::{env, sync::Arc};
+use tokio::fs;
 
+mod api;
+mod bot;
 mod config;
 mod task;
 mod worker;
-mod api;
-mod bot;
 
+use bot::Bot;
 use config::{load_config, write_config, Config};
-use task::Task;
-use bot::Handler;
+use worker::Worker;
 
 const DEFAULT_PATH: &str = "./config.toml";
 
@@ -22,10 +22,8 @@ async fn main() {
     // Environment variables
     // Maybe move them into config.toml?
     dotenv().ok();
-    let token =
-        env::var("DISCORD").expect("Expected Discord token in the environment");
-    let client_id =
-        env::var("CLIENT_ID").expect("Expected cilent id in the environment");
+    let token = env::var("DISCORD").expect("Expected Discord token in the environment");
+    let client_id = env::var("CLIENT_ID").expect("Expected cilent id in the environment");
     let client_secret =
         env::var("CLIENT_SECRET").expect("Expected client secret in the environment");
 
@@ -63,17 +61,16 @@ async fn main() {
         .await
         .expect("Failed to connect to the SQLite database");
 
-    // Convert config into tasks
-    let tasks: Vec<Task> = config.into();
+    let worker = Arc::from(RwLock::from(Worker::new(
+        client_id,
+        client_secret,
+        config.into(),
+    )));
 
     let intents = GatewayIntents::GUILD_MESSAGES;
     let mut client = Client::builder(&token, intents)
-        .event_handler(Handler::new(
-            client_id,
-            client_secret,
-            tasks,
-            db_pool
-        ))
+        .type_map_insert::<Worker>(worker)
+        .event_handler(Bot)
         .await
         .expect("Error while creating the client!");
 

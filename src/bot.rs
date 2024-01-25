@@ -8,34 +8,14 @@ use crate::api::{Api, Options};
 use crate::task::Task;
 
 #[allow(dead_code)]
-pub struct Handler {
-    client_id: String,
-    client_secret: String,
-    tasks: Vec<Task>,
-    conn: SqlitePool,
-}
-
-impl Handler {
-    pub fn new(
-        client_id: String,
-        client_secret: String,
-        tasks: Vec<Task>,
-        conn: SqlitePool,
-    ) -> Self {
-        Handler {
-            client_id,
-            client_secret,
-            tasks,
-            conn,
-        }
-    }
-}
+pub struct Bot;
 
 #[async_trait]
-impl EventHandler for Handler {
+impl EventHandler for Bot {
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
 
+        /*
         let ctx = Arc::new(ctx);
         let tasks = self.tasks.clone();
         let api = Api::new(self.client_id.clone(), self.client_secret.clone());
@@ -48,6 +28,7 @@ impl EventHandler for Handler {
                 tokio::time::sleep(Duration::from_secs(400)).await;
             }
         });
+        */
     }
 }
 
