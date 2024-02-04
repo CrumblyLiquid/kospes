@@ -1,19 +1,14 @@
 use dotenv::dotenv;
-use serenity::all::GatewayIntents;
-use serenity::prelude::*;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
-use std::{env, sync::Arc};
+use std::env;
 use tokio::fs;
 
 mod api;
 mod bot;
 mod config;
 mod task;
-mod worker;
 
-use bot::Bot;
+use bot::run;
 use config::{load_config, write_config, Config};
-use worker::Worker;
 
 const DEFAULT_PATH: &str = "./config.toml";
 
@@ -50,31 +45,5 @@ async fn main() {
     };
 
     println!("{:#?}", config);
-
-    // Create SQLite database connection
-    // Used for storing seen events, etc.
-    let db_options = SqliteConnectOptions::new()
-        .filename(&config.db)
-        .create_if_missing(true);
-
-    let db_pool = SqlitePool::connect_with(db_options)
-        .await
-        .expect("Failed to connect to the SQLite database");
-
-    let worker = Arc::from(RwLock::from(Worker::new(
-        client_id,
-        client_secret,
-        config.into(),
-    )));
-
-    let intents = GatewayIntents::GUILD_MESSAGES;
-    let mut client = Client::builder(&token, intents)
-        .type_map_insert::<Worker>(worker)
-        .event_handler(Bot)
-        .await
-        .expect("Error while creating the client!");
-
-    if let Err(why) = client.start().await {
-        println!("Client error: {why:?}");
-    }
+    run(config, client_id, client_secret, token).await;
 }
