@@ -5,7 +5,8 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 use tokio::time::Duration;
 
-use crate::api::{event::EventOptions, Api};
+use crate::api::courses::Courses;
+use crate::api::sirius::{EventOptions, Sirius};
 use crate::config::Config;
 use crate::task::Task;
 
@@ -19,8 +20,12 @@ impl TypeMapKey for Database {
     type Value = Arc<RwLock<SqlitePool>>;
 }
 
-impl TypeMapKey for Api {
-    type Value = Arc<RwLock<Api>>;
+impl TypeMapKey for Sirius {
+    type Value = Arc<RwLock<Sirius>>;
+}
+
+impl TypeMapKey for Courses {
+    type Value = Arc<RwLock<Courses>>;
 }
 
 struct Bot;
@@ -33,11 +38,18 @@ impl EventHandler for Bot {
         let ctx = Arc::new(ctx);
         tokio::spawn(async move {
             loop {
-                let (api_lock, task_lock, db_lock) = get_locks(Arc::clone(&ctx))
+                let (sirius_lock, courses_lock, task_lock, db_lock) = get_locks(Arc::clone(&ctx))
                     .await
                     .expect("Faild to obtain all locks from TypeMap");
 
-                let duration = check(Arc::clone(&ctx), api_lock, task_lock, db_lock).await;
+                let duration = check(
+                    Arc::clone(&ctx),
+                    sirius_lock,
+                    courses_lock,
+                    task_lock,
+                    db_lock,
+                )
+                .await;
 
                 tokio::time::sleep(duration).await;
             }
@@ -48,28 +60,31 @@ impl EventHandler for Bot {
 async fn get_locks(
     ctx: Arc<Context>,
 ) -> Option<(
-    Arc<RwLock<Api>>,
+    Arc<RwLock<Sirius>>,
+    Arc<RwLock<Courses>>,
     Arc<RwLock<Vec<Task>>>,
     Arc<RwLock<SqlitePool>>,
 )> {
     let data = ctx.data.read().await;
 
-    let api_lock = data.get::<Api>()?.clone();
+    let sirius_lock = data.get::<Sirius>()?.clone();
+    let courses_lock = data.get::<Courses>()?.clone();
     let tasks_lock = data.get::<Tasks>()?.clone();
     let db_lock = data.get::<Database>()?.clone();
 
-    Some((api_lock, tasks_lock, db_lock))
+    Some((sirius_lock, courses_lock, tasks_lock, db_lock))
 }
 
 async fn check(
     ctx: Arc<Context>,
-    api_lock: Arc<RwLock<Api>>,
+    sirius_lock: Arc<RwLock<Sirius>>,
+    courses_lock: Arc<RwLock<Courses>>,
     task_lock: Arc<RwLock<Vec<Task>>>,
     db_lock: Arc<RwLock<SqlitePool>>,
 ) -> Duration {
-    let mut api_rc = api_lock.write().await;
-    let api = api_rc.deref_mut();
-    if let Ok(events) = api
+    let mut sirius_rc = sirius_lock.write().await;
+    let sirius = sirius_rc.deref_mut();
+    if let Ok(events) = sirius
         .course_events("BI-LA1.21".into(), EventOptions::default())
         .await
     {
@@ -89,12 +104,12 @@ pub async fn run(config: Config, client_id: String, client_secret: String, token
     let db_pool = SqlitePool::connect_with(db_options)
         .await
         .expect("Failed to connect to the SQLite database");
-
     let tasks: Vec<Task> = config.into();
+    let sirius: Sirius = Sirius::new(client_id, client_secret);
 
     let intents = GatewayIntents::GUILD_MESSAGES;
     let mut client = Client::builder(&token, intents)
-        .type_map_insert::<Api>(Arc::from(RwLock::from(Api::new(client_id, client_secret))))
+        .type_map_insert::<Sirius>(Arc::from(RwLock::from(sirius)))
         .type_map_insert::<Tasks>(Arc::from(RwLock::from(tasks)))
         .type_map_insert::<Database>(Arc::from(RwLock::from(db_pool)))
         .event_handler(Bot)
