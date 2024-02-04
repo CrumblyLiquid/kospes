@@ -1,8 +1,45 @@
+use anyhow::Result;
 use chrono::{DateTime, Utc};
+use reqwest::Client;
 use serde::Deserialize;
 use std::collections::HashMap;
 
+use super::auth::Auth;
 use super::Options;
+
+const SIRIUS_URL: &str = "https://sirius.fit.cvut.cz/api/v1";
+
+#[derive(Debug, Clone)]
+pub struct Sirius {
+    auth: Auth,
+}
+
+impl Sirius {
+    pub fn new(client_id: String, client_secret: String) -> Self {
+        Self {
+            auth: Auth::new(client_id, client_secret, "cvut:sirius:personal:read".into()),
+        }
+    }
+
+    pub async fn course_events(
+        &mut self,
+        course_code: String,
+        options: EventOptions,
+    ) -> Result<EventsResponse> {
+        let token = self.auth.get_token().await?;
+        let map: HashMap<String, String> = options.with_token(token);
+
+        let url = format!("{}/courses/{}/events", SIRIUS_URL, course_code);
+
+        // We have to make request
+        let res = Client::new().get(url).form(&map).send().await?;
+
+        // TODO: Check for StatusCode::OK
+        let text = res.text().await?;
+        let content: EventsResponse = serde_json::from_str(&text)?;
+        Ok(content)
+    }
+}
 
 #[derive(Deserialize, Debug)]
 pub struct EventsResponse {

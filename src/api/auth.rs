@@ -9,15 +9,17 @@ const OAUTH_URL: &str = "https://auth.fit.cvut.cz/oauth/oauth/token";
 pub struct Auth {
     client_id: String,
     client_secret: String,
+    scope: String,
     pub access_token: Option<String>,
     pub expires_in: Instant,
 }
 
 impl Auth {
-    pub fn new(client_id: String, client_secret: String) -> Auth {
+    pub fn new(client_id: String, client_secret: String, scope: String) -> Auth {
         Auth {
             client_id,
             client_secret,
+            scope,
             access_token: None,
             expires_in: Instant::now(),
         }
@@ -33,7 +35,7 @@ impl Auth {
                     ("grant_type", "client_credentials"),
                     ("client_id", &self.client_id),
                     ("client_secret", &self.client_secret),
-                    ("scope", "cvut:sirius:personal:read"),
+                    ("scope", &self.scope),
                 ])
                 .send()
                 .await?;
@@ -45,7 +47,7 @@ impl Auth {
                 self.expires_in = Instant::now() + Duration::from_secs(content.expires_in);
             }
         }
-        Ok(self.access_token.clone().unwrap())
+        Ok(self.access_token.clone().expect("Access token was None even after fetching it"))
     }
 }
 

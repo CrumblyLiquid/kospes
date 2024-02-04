@@ -1,8 +1,42 @@
+use anyhow::Result;
 use chrono::{DateTime, Utc};
+use reqwest::Client;
 use serde::Deserialize;
 use std::collections::HashMap;
 
+use super::auth::Auth;
 use super::Options;
+
+const COURSES_URL: &str = "https://courses.fit.cvut.cz/api/v1";
+
+#[derive(Debug, Clone)]
+pub struct Courses {
+    auth: Auth,
+}
+
+impl Courses {
+    pub fn new(client_id: String, client_secret: String) -> Self {
+        Self {
+            auth: Auth::new(client_id, client_secret, "cvut:cpages:common:read".into()),
+        }
+    }
+
+    // Doesn't work: Needs token with the correct scope -> Can't have generic Api :(
+    pub async fn news(&mut self, options: NewsOptions) -> Result<NewsResponse> {
+        let token = self.auth.get_token().await?;
+        let map: HashMap<String, String> = options.with_token(token);
+
+        let url = format!("{}/cpages/news.json", COURSES_URL);
+
+        // We have to make request
+        let res = Client::new().get(url).form(&map).send().await?;
+
+        // TODO: Check for StatusCode::OK
+        let text = res.text().await?;
+        let content: NewsResponse = serde_json::from_str(&text)?;
+        Ok(content)
+    }
+}
 
 #[derive(Deserialize, Debug)]
 pub struct NewsResponse {
