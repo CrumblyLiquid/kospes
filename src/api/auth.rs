@@ -1,7 +1,7 @@
 use anyhow::Result;
+use reqwest::{Client, StatusCode};
 use serde::Deserialize;
 use tokio::time::{Duration, Instant};
-use reqwest::{Client, StatusCode};
 
 const OAUTH_URL: &str = "https://auth.fit.cvut.cz/oauth/oauth/token";
 
@@ -9,8 +9,8 @@ const OAUTH_URL: &str = "https://auth.fit.cvut.cz/oauth/oauth/token";
 pub struct Auth {
     client_id: String,
     client_secret: String,
-    access_token: Option<String>,
-    expires_in: Instant,
+    pub access_token: Option<String>,
+    pub expires_in: Instant,
 }
 
 impl Auth {
