@@ -27,6 +27,10 @@ pub struct Config {
     /// that is used for storing seen events
     pub db: PathBuf,
 
+    /// News settings
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub news: Option<News>,
+
     /// Map of subject names and their bodies
     #[serde(default)]
     #[serde(alias = "subject")]
@@ -101,6 +105,14 @@ pub struct Calendar {
     /// Path to the .ical file
     pub path: PathBuf,
 
+    #[serde(flatten)]
+    #[serde(skip_serializing_if = "Metadata::is_empty")]
+    pub meta: Metadata,
+}
+
+/// News from Course pages
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct News {
     #[serde(flatten)]
     #[serde(skip_serializing_if = "Metadata::is_empty")]
     pub meta: Metadata,
