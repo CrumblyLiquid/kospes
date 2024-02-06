@@ -1,5 +1,6 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use reqwest::header::AUTHORIZATION;
 use reqwest::Client;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -22,32 +23,24 @@ impl Courses {
     }
 
     // Doesn't work: Needs token with the correct scope -> Can't have generic Api :(
-    pub async fn news(&mut self, options: NewsOptions) -> Result<NewsResponse> {
+    pub async fn news(&mut self, options: NewsOptions) -> Result<Vec<News>> {
         let token = self.auth.get_token().await?;
         let map: HashMap<String, String> = options.with_token(&token);
 
         let url = format!("{}/cpages/news.json", COURSES_URL);
 
-        // We have to make request
-        let res = Client::new().get(url).form(&map).send().await?;
+        let res = Client::new()
+            .get(url)
+            .header(AUTHORIZATION, format!("Bearer {token}"))
+            .form(&map)
+            .send()
+            .await?;
 
         // TODO: Check for StatusCode::OK
         let text = res.text().await?;
-        let content: NewsResponse = serde_json::from_str(&text)?;
+        let content: Vec<News> = serde_json::from_str(&text)?;
         Ok(content)
     }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct NewsResponse {
-    #[serde(flatten)]
-    pub items: Vec<News>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct NewsGroupedResponse {
-    #[serde(flatten)]
-    pub items: HashMap<String, Vec<News>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -78,10 +71,10 @@ pub struct News {
 #[derive(Deserialize, Debug)]
 pub struct NewsAuthor {
     pub name: String,
-    pub uri: String,
+    pub uri: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct NewsOptions {
     /// Specify type of the JSON representation:
     /// Default: `default`
