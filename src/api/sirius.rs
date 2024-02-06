@@ -27,7 +27,7 @@ impl Sirius {
         options: EventOptions,
     ) -> Result<EventsResponse> {
         let token = self.auth.get_token().await?;
-        let map: HashMap<String, String> = options.with_token(token);
+        let map: HashMap<String, String> = options.with_token(&token);
 
         let url = format!("{}/courses/{}/events", SIRIUS_URL, course_code);
 

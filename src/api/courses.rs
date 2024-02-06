@@ -24,7 +24,7 @@ impl Courses {
     // Doesn't work: Needs token with the correct scope -> Can't have generic Api :(
     pub async fn news(&mut self, options: NewsOptions) -> Result<NewsResponse> {
         let token = self.auth.get_token().await?;
-        let map: HashMap<String, String> = options.with_token(token);
+        let map: HashMap<String, String> = options.with_token(&token);
 
         let url = format!("{}/cpages/news.json", COURSES_URL);
 
