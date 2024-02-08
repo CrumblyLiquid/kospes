@@ -2,16 +2,17 @@ use std::sync::Arc;
 
 use serenity::prelude::*;
 use serenity::{all::Ready, async_trait};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
+use sqlx::sqlite::SqlitePool;
 use tokio::time::Duration;
 
 use crate::api::courses::Courses;
 use crate::api::sirius::{EventOptions, Sirius};
 use crate::config::Config;
+use crate::db::get_db;
 use crate::task::Task;
 
-mod news;
 mod events;
+mod news;
 
 impl TypeMapKey for Config {
     type Value = Arc<RwLock<Config>>;
@@ -72,13 +73,8 @@ impl EventHandler for Bot {
                     .await
                     .expect("Faild to obtain all locks from TypeMap");
 
-                let duration = news::check_news(
-                    Arc::clone(&ctx),
-                    config_lock,
-                    courses_lock,
-                    db_lock,
-                )
-                .await;
+                let duration =
+                    news::check_news(Arc::clone(&ctx), config_lock, courses_lock, db_lock).await;
 
                 tokio::time::sleep(duration).await;
             }
@@ -86,17 +82,10 @@ impl EventHandler for Bot {
     }
 }
 
-
 pub async fn run(config: Config, client_id: String, client_secret: String, token: String) {
-    // Create SQLite database connection
-    // Used for storing seen events, etc.
-    let db_options = SqliteConnectOptions::new()
-        .filename(&config.db)
-        .create_if_missing(true);
+    // Get database and setup up correct tables
+    let db = get_db(&config.db).await;
 
-    let db_pool = SqlitePool::connect_with(db_options)
-        .await
-        .expect("Failed to connect to the SQLite database");
     let tasks: Vec<Task> = config.clone().into();
     let sirius: Sirius = Sirius::new(client_id.clone(), client_secret.clone());
     let courses: Courses = Courses::new(client_id, client_secret);
@@ -107,7 +96,7 @@ pub async fn run(config: Config, client_id: String, client_secret: String, token
         .type_map_insert::<Sirius>(Arc::from(RwLock::from(sirius)))
         .type_map_insert::<Courses>(Arc::from(RwLock::from(courses)))
         .type_map_insert::<Tasks>(Arc::from(RwLock::from(tasks)))
-        .type_map_insert::<Database>(Arc::from(RwLock::from(db_pool)))
+        .type_map_insert::<Database>(Arc::from(RwLock::from(db)))
         .event_handler(Bot)
         .await
         .expect("Error while creating the client!");

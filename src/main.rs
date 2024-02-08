@@ -2,6 +2,7 @@ mod api;
 mod bot;
 mod config;
 mod task;
+mod db;
 
 use bot::run;
 use config::{get_config, get_env};
