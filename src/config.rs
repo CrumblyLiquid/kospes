@@ -2,7 +2,7 @@ use std::env;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{ChannelId, RoleId};
