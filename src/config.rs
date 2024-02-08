@@ -1,11 +1,16 @@
+use std::env;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+
+use dotenv::dotenv;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{ChannelId, RoleId};
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use tokio::fs::File;
+use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use toml;
+
+const DEFAULT_PATH: &str = "./config.toml";
 
 pub const DEFAULT_INTERVAL: u32 = 2 * 60 * 60; // 2 hours
 pub const DEFAULT_COOLDOWN: u32 = 24 * 60 * 60; // 1 day
@@ -119,7 +124,7 @@ pub struct News {
 }
 
 pub async fn load_config(path: impl AsRef<Path>) -> Result<Config> {
-    let mut file = File::open(&path).await?;
+    let mut file = fs::File::open(&path).await?;
 
     let mut config_str = String::new();
     file.read_to_string(&mut config_str).await?;
@@ -140,7 +145,45 @@ pub async fn write_config(config: &Config, path: Option<PathBuf>) -> Result<Path
     };
 
     let config_str = toml::to_string(&config)?;
-    let mut file = File::create(cfg_path).await?;
+    let mut file = fs::File::create(cfg_path).await?;
     file.write(config_str.as_bytes()).await?;
     Ok(cfg_path.to_path_buf())
+}
+
+/// Tries to load config from the default path
+/// If that fails, it constructs a Default config and
+/// tries to write it on to the path
+pub async fn get_config() -> Config {
+    let path = DEFAULT_PATH;
+    let config: Config = match fs::try_exists(path).await {
+        Ok(true) => match load_config(path).await {
+            Ok(mut conf) => {
+                conf.path = path.into();
+                conf
+            }
+            Err(e) => panic!("Failed to load config! Error: {}", e),
+        },
+        Ok(false) => {
+            let conf: Config = Config::default();
+            if let Err(e) = write_config(&conf, Some(path.into())).await {
+                panic!("Failed to write default config! Error: {}", e)
+            }
+            conf
+        }
+        Err(e) => panic!("Failed to check config path! Error: {}", e),
+    };
+
+    config
+}
+
+pub fn get_env() -> (String, String, String) {
+    // Environment variables
+    // Maybe move them into config.toml?
+    dotenv().ok();
+    let token = env::var("DISCORD").expect("Expected Discord token in the environment");
+    let client_id = env::var("CLIENT_ID").expect("Expected cilent id in the environment");
+    let client_secret =
+        env::var("CLIENT_SECRET").expect("Expected client secret in the environment");
+
+    (token, client_id, client_secret)
 }
