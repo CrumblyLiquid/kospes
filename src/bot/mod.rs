@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use serenity::prelude::*;
 use serenity::{all::Ready, async_trait};
-use sqlx::sqlite::SqlitePool;
-use tokio::time::Duration;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 
 use crate::api::courses::Courses;
 use crate::api::sirius::{EventOptions, Sirius};
@@ -68,14 +67,7 @@ impl EventHandler for Bot {
         tokio::spawn(async move {
             loop {
                 println!("News loop started!");
-
-                let (config_lock, courses_lock, db_lock) = news::get_news_locks(Arc::clone(&ctx))
-                    .await
-                    .expect("Faild to obtain all locks from TypeMap");
-
-                let duration =
-                    news::check_news(Arc::clone(&ctx), config_lock, courses_lock, db_lock).await;
-
+                let duration = news::check_news(Arc::clone(&ctx)).await;
                 tokio::time::sleep(duration).await;
             }
         });

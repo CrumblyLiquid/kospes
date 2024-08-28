@@ -4,7 +4,7 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 
 pub async fn get_db(path: &PathBuf) -> SqlitePool {
     // Create SQLite database connection
-    // Used for storing seen events, etc.
+    // Used for storing seen events, news, etc.
     let db_options = SqliteConnectOptions::new()
         .filename(path)
         .create_if_missing(true);

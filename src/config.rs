@@ -1,9 +1,9 @@
-use std::env;
 use std::collections::HashMap;
+use std::env;
 use std::path::{Path, PathBuf};
 
-use dotenvy::dotenv;
 use anyhow::Result;
+use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
 use serenity::model::id::{ChannelId, RoleId};
 use tokio::fs;
@@ -118,6 +118,9 @@ pub struct Calendar {
 /// News from Course pages
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct News {
+    /// Which courses to watch
+    pub courses: Vec<String>,
+
     #[serde(flatten)]
     #[serde(skip_serializing_if = "Metadata::is_empty")]
     pub meta: Metadata,

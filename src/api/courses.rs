@@ -22,8 +22,8 @@ impl Courses {
         }
     }
 
-    // Doesn't work: Needs token with the correct scope -> Can't have generic Api :(
-    pub async fn news(&mut self, options: NewsOptions) -> Result<Vec<News>> {
+    /// Only works with Grouped type option
+    pub async fn news(&mut self, options: NewsOptions) -> Result<HashMap<String, Vec<News>>> {
         let token = self.auth.get_token().await?;
         let map: HashMap<String, String> = options.with_token(&token);
 
@@ -32,18 +32,18 @@ impl Courses {
         let res = Client::new()
             .get(url)
             .header(AUTHORIZATION, format!("Bearer {token}"))
-            .form(&map)
+            .query(&map)
             .send()
             .await?;
 
         // TODO: Check for StatusCode::OK
         let text = res.text().await?;
-        let content: Vec<News> = serde_json::from_str(&text)?;
+        let content: HashMap<String, Vec<News>> = serde_json::from_str(&text)?;
         Ok(content)
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct News {
     pub id: String,
     pub title: String,
@@ -68,13 +68,13 @@ pub struct News {
     pub audience: Vec<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct NewsAuthor {
     pub name: String,
     pub uri: Option<String>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct NewsOptions {
     /// Specify type of the JSON representation:
     /// Default: `default`
