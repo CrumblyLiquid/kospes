@@ -41,20 +41,23 @@ impl Sirius {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct EventsResponse {
     pub meta: Meta,
     pub events: Vec<Event>,
 }
 
-#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Meta {
     pub count: i32,
     pub offset: i32,
     pub limit: i32,
 }
 
-#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Event {
     pub id: i32,
     pub name: Option<String>,
@@ -78,14 +81,16 @@ pub struct Event {
     pub links: Links,
 }
 
-#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct OriginalData {
     pub starts_at: Option<DateTime<Utc>>,
     pub ends_at: Option<DateTime<Utc>>,
     pub room_id: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Links {
     pub room: String,
     pub course: String,
@@ -97,7 +102,8 @@ pub struct Links {
     pub applied_exceptions: Vec<i32>,
 }
 
-#[derive(Default, Debug)]
+#[allow(dead_code)]
+#[derive(Default, Debug, Clone)]
 pub struct EventOptions {
     /// The number of entries in collection to return
     /// Default: 10

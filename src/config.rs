@@ -60,7 +60,7 @@ pub struct Config {
 /// When optional values are not present, check for the values
 /// of its parent and if that fails, use the default values
 /// defined in config.rs
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Metadata {
     /// How often to check for updates
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -79,11 +79,42 @@ pub struct Metadata {
 }
 
 impl Metadata {
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.interval.is_none()
             && self.cooldown.is_none()
             && self.channels.is_empty()
             && self.pings.is_empty()
+    }
+
+    pub fn apply(&mut self, meta: &Metadata) -> &mut Self {
+        if self.interval.is_none() {
+            self.interval = meta.interval;
+        }
+
+        if self.cooldown.is_none() {
+            self.cooldown = meta.cooldown;
+        }
+
+        if self.channels.is_empty() {
+            self.channels = meta.channels.clone();
+        }
+
+        if self.pings.is_empty() {
+            self.pings = meta.pings.clone();
+        }
+
+        self
+    }
+}
+
+impl Default for Metadata {
+    fn default() -> Self {
+        Metadata {
+            interval: Some(DEFAULT_INTERVAL),
+            cooldown: Some(DEFAULT_COOLDOWN),
+            channels: Vec::new(),
+            pings: Vec::new()
+        }
     }
 }
 
@@ -119,7 +150,8 @@ pub struct Calendar {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct News {
     /// Which courses to watch
-    pub courses: Vec<String>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub courses: HashMap<String, Metadata>,
 
     #[serde(flatten)]
     #[serde(skip_serializing_if = "Metadata::is_empty")]
