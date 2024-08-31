@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use serenity::prelude::*;
 use serenity::{all::Ready, async_trait};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
+use sqlx::sqlite::SqlitePool;
 
 use crate::api::courses::Courses;
-use crate::api::sirius::{EventOptions, Sirius};
+use crate::api::sirius::Sirius;
 use crate::config::Config;
 use crate::db::get_db;
 use crate::task::Task;

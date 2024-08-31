@@ -43,6 +43,7 @@ impl Courses {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug, Clone)]
 pub struct News {
     pub id: String,
@@ -68,6 +69,7 @@ pub struct News {
     pub audience: Vec<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug, Clone)]
 pub struct NewsAuthor {
     pub name: String,
