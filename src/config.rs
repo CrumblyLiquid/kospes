@@ -13,6 +13,7 @@ use toml;
 const DEFAULT_PATH: &str = "./config.toml";
 
 pub const DEFAULT_INTERVAL: u32 = 2 * 60 * 60; // 2 hours
+pub const DEFAULT_OFFSET: u32 = 0;
 pub const DEFAULT_COOLDOWN: u32 = 24 * 60 * 60; // 1 day
 
 // Database of previously seen events will be moved
@@ -65,6 +66,9 @@ pub struct Metadata {
     /// How often to check for updates
     #[serde(skip_serializing_if = "Option::is_none")]
     pub interval: Option<u32>,
+    /// Initial waiting period
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<u32>,
     /// How long to wait for another check after update is detected
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cooldown: Option<u32>,
@@ -81,6 +85,7 @@ pub struct Metadata {
 impl Metadata {
     pub fn is_empty(&self) -> bool {
         self.interval.is_none()
+            && self.offset.is_none()
             && self.cooldown.is_none()
             && self.channels.is_empty()
             && self.pings.is_empty()
@@ -89,6 +94,10 @@ impl Metadata {
     pub fn apply(&mut self, meta: &Metadata) -> &mut Self {
         if self.interval.is_none() {
             self.interval = meta.interval;
+        }
+
+        if self.offset.is_none() {
+            self.offset = meta.offset;
         }
 
         if self.cooldown.is_none() {
@@ -111,9 +120,10 @@ impl Default for Metadata {
     fn default() -> Self {
         Metadata {
             interval: Some(DEFAULT_INTERVAL),
+            offset: Some(DEFAULT_OFFSET),
             cooldown: Some(DEFAULT_COOLDOWN),
             channels: Vec::new(),
-            pings: Vec::new()
+            pings: Vec::new(),
         }
     }
 }
@@ -151,7 +161,7 @@ pub struct Calendar {
 pub struct News {
     /// Which courses to watch
     #[serde(skip_serializing_if = "HashMap::is_empty")]
-    pub courses: HashMap<String, Metadata>,
+    pub courses: HashMap<String, Option<Metadata>>,
 
     #[serde(flatten)]
     #[serde(skip_serializing_if = "Metadata::is_empty")]

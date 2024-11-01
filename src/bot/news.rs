@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
+use std::ops::{BitAnd, Deref, DerefMut};
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -12,11 +12,12 @@ use tokio::time::Duration;
 
 use super::Database;
 use crate::api::courses::News;
-use crate::config::{get_default_meta, Metadata};
+use crate::config::Metadata;
+use crate::utils::IntoEmbed;
 use crate::{
     api::courses::{Courses, NewsOptions},
     config::Config,
-    string::ToMarkdown,
+    utils::{ToMarkdown, Trackable},
 };
 
 /// Obtian needed locks from the Bot's data storage
@@ -43,19 +44,24 @@ async fn get_duration(config_lock: Arc<RwLock<Config>>, new_news: bool) -> Durat
     let config = config_rc.deref();
 
     // Default interval
-    let mut meta = Metadata::default();
-    meta.apply(&config.meta);
+    let mut default_meta = Metadata::default();
 
     // News interval
-    if let Some(news) = &config.news {
-        meta.apply(&news.meta);
-    }
+    let mut meta: Metadata = if let Some(news) = &config.news {
+        let mut meta = news.meta.clone();
+        meta.apply(&config.meta);
+        meta
+    } else {
+        config.meta.clone()
+    };
+    meta.apply(&default_meta);
 
-    let duration = meta.interval.expect("No default interval found!");
+    let mut duration = meta.interval.expect("No default interval found!");
     if new_news {
-        duration.saturating_add(meta.cooldown.expect("No default cooldown found!"));
+        duration = duration.saturating_add(meta.cooldown.expect("No default cooldown found!"));
     }
 
+    println!("Duration {:#?}, {}", duration, new_news);
     Duration::from_secs(duration.into())
 }
 
@@ -70,9 +76,13 @@ async fn get_subjects(config_lock: Arc<RwLock<Config>>) -> HashMap<String, Metad
         let mut news_meta = news.meta.clone();
         news_meta.apply(default_meta);
 
-        let mut subjects = news.courses.clone();
-        for (_subject, meta) in &mut subjects {
+        let mut subjects: HashMap<String, Metadata> = HashMap::new();
+
+        for (subject, meta) in &news.courses {
+            let mut meta = meta.clone().unwrap_or_default();
             meta.apply(&news_meta);
+
+            subjects.insert(subject.clone(), meta);
         }
 
         subjects.insert("default".to_owned(), news_meta);
@@ -159,14 +169,14 @@ async fn get_new_news(
 
 async fn post_news(
     ctx: Arc<Context>,
-    new_news: HashMap<String, Vec<News>>,
+    new_news: &HashMap<String, Vec<News>>,
     subjects: &HashMap<String, Metadata>,
 ) {
     let default_meta = subjects
         .get("default")
         .expect("No default subject meta present in Subjects HashMap");
 
-    for (subject, news) in &new_news {
+    for (subject, news) in new_news {
         println!("Subject: {} ({})", subject, news.len());
         // If no Metadata is present
         let meta = subjects.get(subject).unwrap_or(default_meta);
@@ -232,11 +242,14 @@ pub async fn check_news(ctx: Arc<Context>) -> Duration {
                     println!("{}: {}", subject, news_vec.len());
                 }
                 let new_news = get_new_news(db_lock, news).await;
+
                 // Only post news if there are any to post
                 if !new_news.is_empty() {
-                    post_news(Arc::clone(&ctx), new_news, &subjects).await;
+                    post_news(Arc::clone(&ctx), &new_news, &subjects).await;
                 }
-                true
+
+                // If there were no new News, return false
+                !new_news.is_empty()
             }
             Err(e) => {
                 println!("Failed to obtain News: {:#?}", e);
@@ -250,55 +263,23 @@ pub async fn check_news(ctx: Arc<Context>) -> Duration {
     get_duration(config_lock, are_new_news).await
 }
 
-impl News {
-    /// Checks the DB if the News are new (if we haven't seen them yet)
-    /// If we haven't seen them, it adds them to the DB
-    pub async fn is_new(&self, pool: &SqlitePool) -> Option<bool> {
-        let res =
-            sqlx::query_as::<_, (u32,)>("SELECT EXISTS (SELECT * FROM seen_news WHERE id = $1)")
-                .bind(&self.id)
-                .fetch_one(pool)
-                .await;
-
-        match res {
-            Ok(count) => {
-                // News with that ID in the database doesn't exists
-                if count.0 == 0 {
-                    // So we should add it into the database
-                    if let Err(e) = sqlx::query("INSERT INTO seen_news (id) VALUES ($1);")
-                        .bind(&self.id.clone())
-                        .execute(pool)
-                        .await
-                    {
-                        println!(
-                            "Failed to add News (id: {}) to seen_news table: {e}",
-                            self.id
-                        );
-
-                        return None;
-                    };
-
-                    Some(true)
-                // There is a row with that ID so this News isn't new
-                } else {
-                    Some(false)
-                }
-            }
-            Err(e) => {
-                println!("Failed to run News::is_new SQL query: {e}");
-                None
-            }
-        }
-    }
-
+impl IntoEmbed for News {
     /// Returns a Serenity Embed that represents the News
     /// that can be directly sent to any Channel
-    pub fn embed(&self, subject: &str) -> CreateEmbed {
+    fn embed(&self, subject: &str) -> CreateEmbed {
         CreateEmbed::new()
             .title(format!("{}: {}", subject, &self.title))
             .description(self.content.to_md(subject))
             .colour(Colour::from_rgb(0, 112, 186))
             .author(CreateEmbedAuthor::new(self.created_by.name.clone()))
             .timestamp(Timestamp::from(self.created_at))
+    }
+}
+
+impl Trackable for News {
+    /// Checks the DB if the News are new (if we haven't seen them yet)
+    /// If we haven't seen them, it adds them to the DB
+    async fn is_new(&self, pool: &SqlitePool) -> Option<bool> {
+        self.is_new_named(pool, "seen_news", &self.id).await
     }
 }

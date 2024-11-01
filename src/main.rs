@@ -3,7 +3,7 @@ mod bot;
 mod config;
 mod task;
 mod db;
-mod string;
+mod utils;
 
 use bot::run;
 use config::{get_config, get_env};
